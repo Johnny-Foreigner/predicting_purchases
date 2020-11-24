@@ -29,10 +29,10 @@ The dataset contains the following features:
 
 
 `event_type` is further broken up into four components, these are:
-1. view - a user viewed a product
-2. cart - a user added a product to shopping cart
-3. remove_from_cart - a user removed a product from shopping cart
-4. purchase - a user purchased a product
+1. `view` - a user viewed a product
+2. `cart` - a user added a product to shopping cart
+3. `remove_from_cart` - a user removed a product from shopping cart
+4. `purchase` - a user purchased a product
 
 An example of a purchase funnel, may be three chronological rows, with the rows sharing `user_session` and `user_id` values. Where the first row is a view, the second is cart, and the final is a purchase.
 
@@ -40,13 +40,29 @@ https://www.kaggle.com/mkechinov/ecommerce-events-history-in-cosmetics-shop
 
 # Data Preparation
 
-All data preparation steps are reproducible and justifiable
+First: After importing our data, I first converted the CSV files to a Pandas DataFrame, and dropped rows containing `cart` or `view` as they are irrelevant to our prediction. You must first add an item to the cart before you can purchase or remove the item.
+
+Second: I dropped the redundant feature `category_id` and filled in the NA's within `brand` as `unknown` as well as dropping the remaining NAs from the DataFrame. We also dropped any rows with a negative value in `price`.
+
+Third: As our DataFrame doesn't have many feautres, we will have to build out our own features to help our models perform better. As we have a timestamp for every event, we will start with Feature Engineering using time.
+
+Fourth: I then used LabelBinarizer and OneHotEncoder on several feature in the natives dataset, and several of the features we built above to create many new features.
+
+Fifth: Now that are data had been cleaned up and the new features we wanted to add have been built, we then needed to establish what our target column is and set it to y, with our predictors being set to X. We set y equal to `event_time`
+
+Finally: We saw we had roughly 2:1 class imbalance in our dataset, so before we could train_test_split our data we SMOTEd the data to balance our targets.
 
 # Model
 
 # Evalutaiton and Deployment
 
 # Summary and Next Steps
+I have addressed the problem of items being removed from the cart by creating a predictive model to identify events that will likely result in a item being `removed_from_cart`. This will allow e-commerce executives and key stakeholders to push incentives on those that are at risk of not purchasing an item. These could be:
+1. Free shipping
+2. Discounts
+3. Bundles
+
+We studied the problem and the data available, iterated through several model prototypes, and developed a model successfully predicts almost XYZ of removed from cart events. I hope my predictive model will assist companies and organizations in targeting those at high risk of removing an item from their cart. You've done the hard work getting customers to visit your site, don't loose easy money by not closing the sale.
 
 
 # Citations
