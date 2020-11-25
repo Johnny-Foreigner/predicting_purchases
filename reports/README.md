@@ -10,7 +10,7 @@ This has presented a serious challenge to e-commerce stores in the form of cart 
 
 <a href="https://www.statista.com/statistics/477804/online-shopping-cart-abandonment-rate-worldwide/" rel="nofollow"><img src="https://www.statista.com/graphic/1/477804/online-shopping-cart-abandonment-rate-worldwide.jpg" alt="Statistic: Online shopping cart abandonment rate worldwide from 2006 to 2019 | Statista" style="width: 100%; height: auto !important; max-width:1000px;-ms-interpolation-mode: bicubic;"/></a><br />Find more statistics at  <a href="https://www.statista.com" rel="nofollow">Statista</a> <sup>2</sup>
 
-The good news for data scientists is that during an in store purchase a customer can have a large degree of privacy, while almost every move an online customer makes is tracked and stored in a series of databases. This data can be used to produce insights into customer purchasing behaviour, and spending patterns. Using the "eCommerce Events History in Cosmetics Shop" on kaggle<sup>3</sup> (https://www.kaggle.com/mkechinov/ecommerce-events-history-in-cosmetics-shop) we plan to analyse the purchasing patterns in the five month history the dataset provides and predict wether a customer is going to remove an item from their cart. With this knowledge a company can then provide incentives, such as free shipping or discounts to turn that removal into a purchase.
+The good news for data scientists is that during an in store purchase a customer can have a large degree of privacy, while almost every move an online customer makes is tracked and stored in a series of databases. This data can be used to produce insights into customer purchasing behaviour, and spending patterns. Using the "eCommerce Events History in Cosmetics Shop" on kaggle<sup>3</sup> (https://www.kaggle.com/mkechinov/ecommerce-events-history-in-cosmetics-shop) I plan to analyse the purchasing patterns in the five month history the dataset provides and predict wether a customer is going to remove an item from their cart. With this knowledge a company can then provide incentives, such as free shipping or discounts to turn that removal into a purchase.
 
 # Data Understanding
 
@@ -41,24 +41,24 @@ An example of a purchase funnel, may be three chronological rows, with the rows 
 
 First: After importing our data, I first converted the CSV files to a Pandas DataFrame, and dropped rows containing `cart` or `view` as they are irrelevant to our prediction. You must first add an item to the cart before you can purchase or remove the item.
 
-Second: I dropped the redundant feature `category_id` and filled in the NA's within `brand` as `unknown` as well as dropping the remaining NAs from the DataFrame. We also dropped any rows with a negative value in `price`.
+Second: I dropped the redundant feature `category_id` and filled in the NA's within `brand` as `unknown` as well as dropping the remaining NAs from the DataFrame. I also dropped any rows with a negative value in `price`.
 
-Third: As our DataFrame doesn't have many feautres, we will have to build out our own features to help our models perform better. As we have a timestamp for every event, we will start with Feature Engineering using time.
+Third: As our DataFrame doesn't have many feautres, I will have to build out our own features to help our models perform better. As we have a timestamp for every event, I will start with Feature Engineering using time.
 
-Fourth: I then used LabelBinarizer and OneHotEncoder on several feature in the natives dataset, and several of the features we built above to create many new features.
+Fourth: I then used LabelBinarizer and OneHotEncoder on several feature in the natives dataset, and several of the features I built above to create many new features.
 
-Fifth: Now that are data had been cleaned up and the new features we wanted to add have been built, we then needed to establish what our target column is and set it to y, with our predictors being set to X. We set y equal to `event_time`
+Fifth: Now that are data had been cleaned up and the new features I wanted to add have been built, I then needed to establish what our target column is and set it to y, with our predictors being set to X. I set y equal to `event_time`
 
-Finally: We saw we had roughly 2:1 class imbalance in our dataset, so before we could train_test_split our data we SMOTEd the data to balance our targets.
+Finally: I saw we had roughly 2:1 class imbalance in our dataset, so before I could train_test_split our data I SMOTEd the data to balance our targets.
 
 # Model
-Our first step in creating a predictive model was to choose a target metric. It was more important for our stakeholders to catch those people who are about to remove an item from their cart. If we can correctly predict those events stakeholders are able to incentive a user to make a purchase.
+Our first step in creating a predictive model was to choose a target metric. It was more important for our stakeholders to catch those people who are about to remove an item from their cart. If I can correctly predict those events stakeholders are able to incentive a user to make a purchase.
 
 The metric I used for this model was a recall score on removed_from_cart events. This score specifically reduces false-negative results, which would lead to items being abandoned when the model has predict they will be purchased. However, it may also allows for more false positives, possibly resulting in resources being spent to convert a sale, that would have been made organicly. 
 
 I tested several different models without hyperparameter tuning. These included: LGBMClassifier, DecisionTreeClassifier, and a RandomForestClassifier. Upon comparing the scores of their classification reports I settled on the RandomForestClassifier as the best model.
 
-After hyper tuning select parameters to improve the quality of our model we settled on a RandomForestClassifier with n_estimators set to 400, max_features set to 100, and max_depth equalling 115. The criterion was set to gini, and Bootstrap was set to True. The rest of the parameters were left as default variables.
+After hyper tuning select parameters to improve the quality of our model I settled on a RandomForestClassifier with n_estimators set to 400, max_features set to 100, and max_depth equalling 115. The criterion was set to gini, and Bootstrap was set to True. The rest of the parameters were left as default variables.
 
 # Evalutaiton and Deployment
 Our focus was producing the highest Recall on The model returned a Recall Score on Class 1 (removed_from_cart) of .84 on the test set, and .90 on the training set. Recall on Class 0 measures what percentage of the truly removed_from_cart events our model correctly identifies. Our model correctly predicts truly removed_from_cart events 84% of the time on our test data.
@@ -73,9 +73,9 @@ I have addressed the problem of items being removed from the cart by creating a 
 2. Discounts
 3. Bundles
 
-We studied the problem and the data available, iterated through several model prototypes, and developed a model that successfully predicts 84% of removed from cart events. I hope my predictive model will assist companies and organizations in targeting those at high risk of removing an item from their cart. You've done the hard work getting customers to visit your site, don't lose easy money by not closing the sale.
+I studied the problem and the data available, iterated through several model prototypes, and developed a model that successfully predicts 84% of removed from cart events. I hope my predictive model will assist companies and organizations in targeting those at high risk of removing an item from their cart. You've done the hard work getting customers to visit your site, don't lose easy money by not closing the sale.
 
-With regards to next steps there are a few directions I would like to take a look out at our Class 1 (purchased) scores. I believe with some more feature engineering we could improve the scores for that class across the board. I would also be interested in further hyperparameter tuning. Due to time and computational power constraints I wasn’t able to test as many parameters as I would have liked.
+With regards to next steps there are a few directions I would like to take a look out at our Class 1 (purchased) scores. I believe with some more feature engineering I could improve the scores for that class across the board. I would also be interested in further hyperparameter tuning. Due to time and computational power constraints I wasn’t able to test as many parameters as I would have liked.
 
 
 # Citations
