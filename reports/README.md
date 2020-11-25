@@ -61,21 +61,27 @@ I tested several different models without hyperparameter tuning. These included:
 After hyper tuning select parameters to improve the quality of our model we settled on a RandomForestClassifier with n_estimators set to 400, max_features set to 100, and max_depth equalling 115. The criterion was set to gini, and Bootstrap was set to True. The rest of the parameters were left as default variables.
 
 # Evalutaiton and Deployment
-Our focus was producing the highest Recall on The model returned a Recall Score on Class 1 (removed_from_cart) of XYZ on the test set, and a XYZ on the training set. Recall on Class 0 measures what percentage of the truly removed_from_cart events our model correctly identifies. Our model correctly predicts truly removed_from_cart events XYZ% of the time on our test data.
+Our focus was producing the highest Recall on The model returned a Recall Score on Class 1 (removed_from_cart) of .84 on the test set, and .90 on the training set. Recall on Class 0 measures what percentage of the truly removed_from_cart events our model correctly identifies. Our model correctly predicts truly removed_from_cart events 84% of the time on our test data.
 
-Given more time I would like to focus on improving the scores on our Class 1 (purchased) categories.
+<p align="center">
+  <img width="400" height="250" src="data_exploration/conufsion_matrix_test.png">
+</p>
 
 # Summary and Next Steps
-I have addressed the problem of items being removed from the cart by creating a predictive model to identify events that will likely result in a item being `removed_from_cart`. This will allow e-commerce executives and key stakeholders to push incentives on those that are at risk of not purchasing an item. These could be:
+I have addressed the problem of items being removed from the cart by creating a predictive model to identify events that will likely result in an item being `removed_from_cart`. This will allow e-commerce executives and key stakeholders to push incentives on those that are at risk of not purchasing an item. These could be:
 1. Free shipping
 2. Discounts
 3. Bundles
 
-We studied the problem and the data available, iterated through several model prototypes, and developed a model successfully predicts almost 77% of removed from cart events. I hope my predictive model will assist companies and organizations in targeting those at high risk of removing an item from their cart. You've done the hard work getting customers to visit your site, don't loose easy money by not closing the sale.
+We studied the problem and the data available, iterated through several model prototypes, and developed a model that successfully predicts 84% of removed from cart events. I hope my predictive model will assist companies and organizations in targeting those at high risk of removing an item from their cart. You've done the hard work getting customers to visit your site, don't lose easy money by not closing the sale.
+
+With regards to next steps there are a few directions I would like to take a look out at our Class 1 (purchased) scores. I believe with some more feature engineering we could improve the scores for that class across the board. I would also be interested in further hyperparameter tuning. Due to time and computational power constraints I wasn’t able to test as many parameters as I would have liked.
 
 
 # Citations
 
 <sup>1</sup> "US Ecommerce Growth Jumps to More than 30%, Accelerating Online Shopping Shift by Nearly 2 Years", https://www.emarketer.com/content/us-ecommerce-growth-jumps-more-than-30-accelerating-online-shopping-shift-by-nearly-2-years
+
 <sup>2</sup> "Online shopping cart abandonment rate worldwide", https://www.statista.com/statistics/477804/online-shopping-cart-abandonment-rate-worldwide/
+
 <sup>3</sup> "eCommerce Events History in Cosmetics Shop", https://www.kaggle.com/mkechinov/ecommerce-events-history-in-cosmetics-shop
