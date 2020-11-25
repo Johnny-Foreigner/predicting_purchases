@@ -64,7 +64,7 @@ After hyper tuning select parameters to improve the quality of our model we sett
 Our focus was producing the highest Recall on The model returned a Recall Score on Class 1 (removed_from_cart) of .84 on the test set, and .90 on the training set. Recall on Class 0 measures what percentage of the truly removed_from_cart events our model correctly identifies. Our model correctly predicts truly removed_from_cart events 84% of the time on our test data.
 
 <p align="center">
-  <img width="400" height="250" src="../data_exploration/conufsion_matrix_test.png">
+  <img width="400" height="250" src="/data_exploration/conufsion_matrix_test.png">
 </p>
 
 # Summary and Next Steps
