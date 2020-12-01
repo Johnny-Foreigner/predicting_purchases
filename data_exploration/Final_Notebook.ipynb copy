@@ -1,0 +1,1048 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import zipfile\n",
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "import seaborn as sns\n",
+    "import matplotlib.pyplot as plt\n",
+    "import kaggle\n",
+    "from sklearn.model_selection import train_test_split\n",
+    "from sklearn import preprocessing\n",
+    "from datetime import datetime\n",
+    "from pandas.tseries.holiday import USFederalHolidayCalendar as calendar\n",
+    "from sklearn.preprocessing import OneHotEncoder, StandardScaler, LabelBinarizer, MultiLabelBinarizer\n",
+    "from imblearn.over_sampling import SMOTE\n",
+    "from collections import Counter\n",
+    "from sklearn.datasets import make_classification\n",
+    "from imblearn.under_sampling import NearMiss\n",
+    "from numpy import where\n",
+    "import pickle\n",
+    "\n",
+    "\n",
+    "\n",
+    "from sklearn.ensemble import RandomForestClassifier\n",
+    "from sklearn.tree import DecisionTreeClassifier\n",
+    "from sklearn.model_selection import train_test_split, cross_val_score\n",
+    "from sklearn.metrics import accuracy_score, confusion_matrix, classification_report, f1_score, recall_score\n",
+    "from sklearn.model_selection import GridSearchCV, validation_curve\n",
+    "from sklearn.metrics import plot_confusion_matrix\n",
+    "import seaborn as sns\n",
+    "from dask.distributed import Client"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Business Understanding\n",
+    "\n",
+    "In the last decade, e-commerce has fundamentally changed how we live our lives through how we shop. Companies such as Sears have gone bankrupt over the years, making the transition from brick and mortar to an online e-commerce marketplace, however other companies such as Chewy, have been able to exploit e-commerce to become a market leader in their category.\n",
+    "\n",
+    "A study by emarketer.com found that the pandemic has had beneficial effects on US e-commerce. Sales will reach $794.50 billion this year, up 32.4% year-over-year. That’s a much higher growth rate than the 18.0% predicted in our Q2 forecast, as consumers continue to avoid stores and opt for online shopping amid the pandemic. By the end of the year e-commerce sales will reach 14.4% of all US retail spending for the year and 19.2% by 2024. If you further dig into the data and exclude gas and auto sales (categories sold almost exclusively offline), ecommerce penetration jumps to 20.6%.(1)\n",
+    "\n",
+    "With e-commerce growing at such an unprecedented rate, many companies are to capitalise on this change in consumer behaviour. It comes as no surprise to many that purchasing items online is a different process from buying an item in a store. While in a store an employee can help guide a customer to items they are both looking for and items they may want to consider purchasing, many e-commerce marketplaces dont have the same leverage; it's much easier to close out of a \"You should buy\" popup, rather than to ignore the advice of an instore expert. \n",
+    "\n",
+    "This has presented a serious challenge to e-commerce stores in the form of cart abandonment. Cart abandonment is when a customer leaves without buying, after adding an item to their cart. It is a trend that has remained steady since e-commerce entered the mainstream, as seen in the below chart from statista.\n",
+    "\n",
+    "<a href=\"https://www.statista.com/statistics/477804/online-shopping-cart-abandonment-rate-worldwide/\" rel=\"nofollow\"><img src=\"https://www.statista.com/graphic/1/477804/online-shopping-cart-abandonment-rate-worldwide.jpg\" alt=\"Statistic: Online shopping cart abandonment rate worldwide from 2006 to 2019 | Statista\" style=\"width: 100%; height: auto !important; max-width:1000px;-ms-interpolation-mode: bicubic;\"/></a><br />Find more statistics at  <a href=\"https://www.statista.com\" rel=\"nofollow\">Statista</a>\n",
+    "\n",
+    "The good news for data scientists is that during an in store purchase a customer can have a large degree of privacy, while almost every move an online customer makes is tracked and stored in a series of databases. This data can be used to produce insights into customer purchasing behaviour, and spending patterns. Using the \"eCommerce Events History in Cosmetics Shop\" on kaggle (3) https://www.kaggle.com/mkechinov/ecommerce-events-history-in-cosmetics-shop we plan to analyse the purchasing patterns in the five month history the dataset provides and predict wether a customer is going to remove an item from their cart. With this knowledge a company can then provide incentives, such as free shipping or discounts to turn that removal into a purchase.\n",
+    "\n",
+    "# Data Understanding\n",
+    "\n",
+    "The kaggle e-commerce dataset contains behavior data for five months (Oct 2019 – Feb 2020) from a medium sized unnamed cosmetics online store. Each row in the file represents an online event or action. All events are related to products and users.\n",
+    "\n",
+    "The dataset contains the following features:\n",
+    "1. `event_time`: Time when event happened at (in UTC).\n",
+    "2. `event_type`: What action a customer took. For more information please see below.\n",
+    "3. `product_id`: ID of a product\n",
+    "4. `category_id`: Product's category ID\n",
+    "5. `category_code`: Product's category taxonomy (code name) if it was possible to make it. Usually present for meaningful categories and skipped for different kinds of accessories.\n",
+    "6. `brand`: Downcased string of brand name. Can be a nan value, if it was missed.\n",
+    "7. `price`: Float price of a product. Present.\n",
+    "8. `user_id`: Permanent user ID.\n",
+    "9. `user_session` :Temporary user's session ID. Same for each user's session. This value is changed every time user come back to online store from a long pause.\n",
+    "\n",
+    "\n",
+    "`event_type` is further broken up into four components, these are:\n",
+    "1. view - a user viewed a product\n",
+    "2. cart - a user added a product to shopping cart\n",
+    "3. remove_from_cart - a user removed a product from shopping cart\n",
+    "4. purchase - a user purchased a product\n",
+    "\n",
+    "An example of a purchase funnel, may be three chronological rows, with the rows sharing `user_session` and `user_id` values. Where the first row is a view, the second is cart, and the final is a purchase.\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Mission"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "My project is focused on predicitng wether an item will be purchased or removed from the cart on an ecomemrce store. This will be used to help in marketing, sales. On the supply chain side it will also give more insights into how a product is viewed by customers and how much a brand/product should be stocked or not."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Importing and preparing the data"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "First we need to read the CSVs from our data folder and turn them into Pandas DataFrames for functionality. For a list of instructions on how to download the data form kaggle please see \"../data/data_download.ipynb\""
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Convert csv to DataFrame\n",
+    "oct19 = pd.read_csv(\"../data/2019-Oct.csv\")\n",
+    "nov19 = pd.read_csv(\"../data/2019-Nov.csv\")\n",
+    "dec19 = pd.read_csv(\"../data/2019-Dec.csv\")\n",
+    "jan20 = pd.read_csv(\"../data/2020-Jan.csv\")\n",
+    "feb20 = pd.read_csv(\"../data/2020-Feb.csv\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now we have to combine each DataFrame that represents a month into one DataFrame that holds all the months data."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "(20692840, 9)\n"
+     ]
+    }
+   ],
+   "source": [
+    "ecom_df = pd.concat([oct19, nov19, dec19, jan20, feb20], axis=0)\n",
+    "print(ecom_df.shape)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Dropping columns here to both save memory latter on, also they are irrelevant to our data as we are only looking at purhcased, or removed from cart event_types."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "(5266686, 9)\n"
+     ]
+    }
+   ],
+   "source": [
+    "ecom_df = ecom_df[ecom_df.event_type != 'view']\n",
+    "ecom_df = ecom_df[ecom_df.event_type != 'cart']\n",
+    "print(ecom_df.shape)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Data Cleaning"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Before we start working with the data we need to make sure the dataset is in a workable state."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### NAs"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Renaming unknown values in the brand column with the string 'Unknown'."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ecom_df.brand.fillna(value=\"unknown\", axis=0, inplace=True)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Dropping the remaining NA's in the dataset."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ecom_df.dropna(inplace=True)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Tidying the DataFrame"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Dropping category_id, as we will use category code instead. It is redundant."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ecom_df.drop(\"category_id\", axis=1, inplace = True)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Removing any negative prices that appear in the dataset."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ecom_df = ecom_df[ecom_df['price']>= 0]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Setting our target variable, `event_type` to binary."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ecom_df.event_type = ecom_df[\"event_type\"].replace({'purchase': 0, 'remove_from_cart': 1})"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(55663, 8)"
+      ]
+     },
+     "execution_count": 10,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "ecom_df.shape"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Feature Engineering"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "As our DataFrame doesn't have many feautres, we will have to build out our own features to help our models perform better. As we have a timestamp for every event, we will start with Feature Engineering using time."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Time Based Features"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "First we convert our event_time into a datatime object to allow us to have more functionality with the column."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ecom_df['event_time'] = pd.to_datetime(ecom_df['event_time'])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The first feature we will add, is if an event happened on a Holiday. It seems reasonable that people may be more inclined to spend money when they have the day off work."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "dr = pd.date_range(start='2019-10-01', end='2020-02-29')\n",
+    "df = pd.DataFrame()\n",
+    "df['Date'] = dr\n",
+    "\n",
+    "cal = calendar()\n",
+    "holidays = cal.holidays(start=dr.min(), end=dr.max())\n",
+    "ecom_df['holiday'] = ecom_df['event_time'].isin(holidays)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We now will pull from the `event_time` column three new columns:\n",
+    "1. What month was the event during?\n",
+    "2. Was the event in 2020 or 2019?\n",
+    "3. What hour of the day is the event taken place during?"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ecom_df['month'] = pd.DatetimeIndex(ecom_df['event_time']).month\n",
+    "ecom_df['2020'] = pd.DatetimeIndex(ecom_df['event_time']).year\n",
+    "ecom_df['hour'] = pd.DatetimeIndex(ecom_df['event_time']).hour\n",
+    "\n",
+    "#converting the year to binary\n",
+    "ecom_df['2020'] = ecom_df['2020'].replace({2019: 0, 2020: 1})\n",
+    "\n",
+    "#converting month to string\n",
+    "ecom_df['month'] = ecom_df['month'].replace({1: 'January', 2: 'Febuary', 10: 'October', 11: 'November', 12: 'December'})"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now to add a feature, on what day of the week will a purchase take place."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ecom_df['day'] = ecom_df['event_time'].dt.dayofweek\n",
+    "ecom_df['day'] = ecom_df['day'].replace({0: 'Monday', 1: 'Tuesday', 2: 'Wednesday', 3: 'Thursday', 4: 'Friday', 5: 'Saturday', 6: 'Sunday'})"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Creating four bins, we will also establish a feature that describes at what period of the day did an event happen:\n",
+    "1. Night: Midnight -> 6am\n",
+    "2. Morning: 6am -> Midday\n",
+    "3. Afternoon: Midday -> 6pm \n",
+    "4. Evening: 6pm ->Midnight"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#creating new when dataframe\n",
+    "when_df = pd.DataFrame({'hour':range(1, 25)})\n",
+    "bins = [0,6,12,18,24]\n",
+    "labels = ['Night', 'Morning','Afternoon','Evening']\n",
+    "when_df['when'] = pd.cut(when_df['hour'], bins=bins, labels=labels, include_lowest=True)\n",
+    "\n",
+    "#joining the new dataframe\n",
+    "ecom_df = ecom_df.join(when_df['when'], on=\"hour\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "(55663, 14)\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(ecom_df.shape)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Labeling"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now we will use LabelBinarizer and OneHotEncoder on several feature in the natives dataset, and several of the features we built above to create many new features"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Labeling\n",
+    "encoder = LabelBinarizer()\n",
+    "brand_labels = pd.DataFrame(encoder.fit_transform(ecom_df[['brand']]), columns=encoder.classes_, index=ecom_df.index)\n",
+    "encoder2 = LabelBinarizer()\n",
+    "productid_labels = pd.DataFrame(encoder2.fit_transform(ecom_df[[\"product_id\"]]), columns=encoder2.classes_, index=ecom_df.index)\n",
+    "\n",
+    "#OHE\n",
+    "ohe = OneHotEncoder(sparse=False, drop='first')\n",
+    "catco_labels = pd.DataFrame(ohe.fit_transform(ecom_df[['category_code']]), index=ecom_df.index, columns=ohe.get_feature_names(ecom_df[[\"category_code\"]].columns))\n",
+    "ohe = OneHotEncoder(sparse=False, drop='first')\n",
+    "day_labels = pd.DataFrame(ohe.fit_transform(ecom_df[['day']]), index=ecom_df.index, columns=ohe.get_feature_names(ecom_df[[\"day\"]].columns))\n",
+    "ohe = OneHotEncoder(sparse=False, drop='first')\n",
+    "month_labels = pd.DataFrame(ohe.fit_transform(ecom_df[['month']]), index=ecom_df.index, columns=ohe.get_feature_names(ecom_df[[\"month\"]].columns))\n",
+    "ohe = OneHotEncoder(sparse=False, drop='first')\n",
+    "when_labels = pd.DataFrame(ohe.fit_transform(ecom_df[['when']]), index=ecom_df.index, columns=ohe.get_feature_names(ecom_df[[\"when\"]].columns))\n",
+    "\n",
+    "#join the dataframes together\n",
+    "ecom_df = ecom_df.join(brand_labels)\n",
+    "ecom_df = ecom_df.join(productid_labels)\n",
+    "ecom_df = ecom_df.join(catco_labels)\n",
+    "ecom_df = ecom_df.join(day_labels)\n",
+    "ecom_df = ecom_df.join(month_labels)\n",
+    "ecom_df = ecom_df.join(when_labels)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "(93421, 555)\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(ecom_df.shape)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Preprocessing Data"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now are data has been cleaned up and the new features we wanted to add have been built, we now need to establish what our target column is and set it to y, with our predictors being set to X.\n",
+    "\n",
+    "We will also need to drop our features in `ecom_df` that we have encoded or are redundant.\n",
+    "\n",
+    "As our `event_type` column has already been converted to binary we can set it to y."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Train Test Split"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "X = ecom_df.drop([\"month\", \"hour\", \"day\", \"when\", \"user_id\", \"product_id\", \"category_code\", \"event_time\", \"event_type\", \"brand\", \"user_session\"], axis=1)\n",
+    "y = ecom_df.event_type"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We will also check out y classes to see if there is a class imbalance."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "1    65903\n",
+       "0    27518\n",
+       "Name: event_type, dtype: int64"
+      ]
+     },
+     "execution_count": 20,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "y.value_counts()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(93421, 555)"
+      ]
+     },
+     "execution_count": 21,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "ecom_df.shape"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can see there is a class imbalance. We will have to account for this before we model.\n",
+    "\n",
+    "Now that our data has been seperated we need to split the data into a train and test set."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### SMOTE"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "As we have a class imbalance of roughly 2:1 in favour of our `removed_from_cart` category we will smote our training data to help our models perform more accurately."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "sm = SMOTE(random_state=42)\n",
+    "X_tr_sm, y_tr_sm = sm.fit_resample(X_train, y_train)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(105456, 544)"
+      ]
+     },
+     "execution_count": 24,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "X_tr_sm.shape"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Models"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### LGBMClassifier"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "LGBM is one of the strongest, if not the strongest, model on the market currently. I have had success with it before and wanted to start with a strong model to see what kind of results it can give as a benchmark."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import lightgbm as lgb"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "           0       0.53      0.56      0.55      5510\n",
+      "           1       0.81      0.79      0.80     13175\n",
+      "\n",
+      "    accuracy                           0.72     18685\n",
+      "   macro avg       0.67      0.68      0.67     18685\n",
+      "weighted avg       0.73      0.72      0.73     18685\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Instantiate XGBClassifier\n",
+    "lgbm = lgb.LGBMClassifier()\n",
+    "\n",
+    "# Fit XGBClassifier\n",
+    "lgbm.fit(X_tr_sm,  y_tr_sm)\n",
+    "\n",
+    "# Predict on training and test sets\n",
+    "training_preds_lgbm = lgbm.predict(X_tr_sm)\n",
+    "test_preds_lgbm = lgbm.predict(X_test)\n",
+    "\n",
+    "# Printing the Classification Report to see how our model performed\n",
+    "first_results=classification_report(y_test, test_preds_lgbm)\n",
+    "print(first_results)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "While LGBM gave great results with default hyperparameters, I wanted to try some different models first."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### DecisionTreeClassifier"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Our next model was a Decision Tree. We wanted something to compare to XGBoost that was a little bit more simple but still could deal with complex models. We also wanted a model that could execute faster than XGBoost."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "           0       0.57      0.64      0.60      5510\n",
+      "           1       0.84      0.80      0.82     13175\n",
+      "\n",
+      "    accuracy                           0.75     18685\n",
+      "   macro avg       0.71      0.72      0.71     18685\n",
+      "weighted avg       0.76      0.75      0.76     18685\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "tree_clf = DecisionTreeClassifier() \n",
+    "\n",
+    "tree_clf.fit(X_tr_sm, y_tr_sm)\n",
+    "\n",
+    "# Predict on training and test sets\n",
+    "training_preds_tclf = tree_clf.predict(X_tr_sm)\n",
+    "test_preds_tclf = tree_clf.predict(X_test)\n",
+    "\n",
+    "# Printing the Classification Report to see how our model performed\n",
+    "first_results=classification_report(y_test, test_preds_tclf)\n",
+    "print(first_results)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### RandomForestClassifier"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "While RandomForest usually performs worse than LGBM, I wanted to do my due dilligence and test the models performance first."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "           0       0.60      0.61      0.61      5510\n",
+      "           1       0.84      0.83      0.83     13175\n",
+      "\n",
+      "    accuracy                           0.77     18685\n",
+      "   macro avg       0.72      0.72      0.72     18685\n",
+      "weighted avg       0.77      0.77      0.77     18685\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "rf = RandomForestClassifier()\n",
+    "\n",
+    "rf.fit(X_tr_sm, y_tr_sm)\n",
+    "\n",
+    "# Predict on training and test sets\n",
+    "training_preds_rf = rf.predict(X_tr_sm)\n",
+    "test_preds_rf = rf.predict(X_test)\n",
+    "\n",
+    "# Printing the Classification Report to see how our model performed\n",
+    "first_results=classification_report(y_test, test_preds_rf)\n",
+    "print(first_results)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Hyperparamter Tuning"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We have established that our RandomForestClassifier appears to be the best performing model at baseline. The next step is to adjust certain parameters to help improve the quality of our model. \n",
+    "\n",
+    "Warning: this grid will take a while to run."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "param_grid = {\n",
+    "    'bootstrap': [True],\n",
+    "    'max_depth': [80, 95, 110, 115, 120],\n",
+    "    'max_features': [2, 3, 7, 10, 30, 50, 100, 150],\n",
+    "    'criterion': ['gini', 'entropy'],\n",
+    "    'n_estimators': [100, 200, 300, 400]}"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "metadata": {},
+   "outputs": [
+    {
+     "ename": "NameError",
+     "evalue": "name 'rf3' is not defined",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mNameError\u001b[0m                                 Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-30-d335f7896124>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m\u001b[0m\n\u001b[1;32m      1\u001b[0m \u001b[0;31m# Instantiate the grid search model\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m----> 2\u001b[0;31m clf = GridSearchCV(estimator = rf3, param_grid = param_grid, \n\u001b[0m\u001b[1;32m      3\u001b[0m                           cv = 3, n_jobs = -1, verbose = 2)\n\u001b[1;32m      4\u001b[0m \u001b[0mclf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mfit\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mX_tr_sm\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0my_tr_sm\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      5\u001b[0m GridSearchCV(estimator=rf3,\n",
+      "\u001b[0;31mNameError\u001b[0m: name 'rf3' is not defined"
+     ]
+    }
+   ],
+   "source": [
+    "# Instantiate the grid search model\n",
+    "clf = GridSearchCV(estimator = rf3, param_grid = param_grid, \n",
+    "                          cv = 3, n_jobs = -1, verbose = 2)\n",
+    "clf.fit(X_tr_sm, y_tr_sm)\n",
+    "GridSearchCV(estimator=rf3,\n",
+    "             param_grid=param_grid)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def evaluate(model, test_features, test_labels):\n",
+    "    predictions = model.predict(test_features)\n",
+    "    errors = abs(predictions - test_labels)\n",
+    "    mape = 100 * np.mean(errors / test_labels)\n",
+    "    accuracy = 100 - mape\n",
+    "    print('Model Performance')\n",
+    "    print('Average Error: {:0.4f} degrees.'.format(np.mean(errors)))\n",
+    "    print('Accuracy = {:0.2f}%.'.format(accuracy))\n",
+    "    \n",
+    "    return accuracy"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Fit the grid search to the data\n",
+    "print(clf.best_params_)\n",
+    "best_grid = clf.best_estimator_\n",
+    "grid_accuracy = evaluate(best_grid, X_test, y_test)\n",
+    "print(grid_accuracy)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Best Model"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "After running the param_grid in our HyperParameter step, we established that the best model is as follows:\n",
+    "RandomForestClassifier with:\n",
+    "1. criterion: gini\n",
+    "2. max_depth: 115\n",
+    "3. max_features: 100\n",
+    "4. n_estimators: 400\n",
+    "5. bootstrap: True"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "Best_model = RandomForestClassifier(bootstrap= True, criterion= 'gini', max_depth= 115, max_features= 100, n_estimators= 400)\n",
+    "\n",
+    "Best_model.fit(X_tr_sm, y_tr_sm)\n",
+    "\n",
+    "# Predict on training and test sets\n",
+    "training_preds_bm = Best_model.predict(X_tr_sm)\n",
+    "test_preds_bm = Best_model.predict(X_test)\n",
+    "\n",
+    "# Printing a classifcation report for our best model\n",
+    "print(classification_report(y_tr_sm, training_preds_bm))\n",
+    "print(classification_report(y_test, test_preds_bm))\n",
+    "\n",
+    "# Saving y preds train\n",
+    "y_pred_tr = pd.DataFrame(data=y_pred_best, columns=y_train.columns, index=y_train.index)\n",
+    "y_pred_tr.to_csv('../data/best_y_preds.csv')\n",
+    "\n",
+    "# Saving y preds test\n",
+    "training_preds_bm = pd.DataFrame(data=y_pred_test, columns=y_test.columns, index=y_test.index)\n",
+    "test_preds_bm.to_csv('../data/y_preds_test.csv')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Visuals"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 34,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 2 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "#confusion matrix\n",
+    "plot_confusion_matrix(estimator=Best_model, y_true=y_tr_sm, X=X_tr_sm)\n",
+    "plt.savefig(\"conufsion_matrix_train\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 35,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "image/png": "iVBORw0KGgoAAAANSUhEUgAAAUUAAAEJCAYAAAAD7jVKAAAAOXRFWHRTb2Z0d2FyZQBNYXRwbG90bGliIHZlcnNpb24zLjMuMiwgaHR0cHM6Ly9tYXRwbG90bGliLm9yZy8vihELAAAACXBIWXMAAAsTAAALEwEAmpwYAAAhTUlEQVR4nO3deZxV9X3/8dd7ZmAGRkBkE1CCC2rU1I0g1kf8YZLGpYkmbWzQNPpIbWyMa2vTaqyxNdHEqGld4kLVuEWtiRqXKGg0Rk1UREUQFEFBVkXAlX3mfn5/nDNwZ5jlnvFeZu6d99PHecy933uW72Xkw3c55/tRRGBmZomqrq6AmVl34qBoZpbHQdHMLI+DoplZHgdFM7M8DopmZnkcFM2sy0i6UdJySa/klR0jaZaknKSxLfY/R9I8SXMkHZZXfoCkmelnV0hSWl4r6f/S8uckje6oTg6KZtaVbgIOb1H2CvA3wJP5hZL2BCYCe6XHXC2pOv34GuAkYEy6NZ3zROC9iNgV+G/g4o4qVNOZb1EqvWv6Rp/e23Z1NSyDWLuuq6tgGaxjNRtivT7JOQ47tD5WrmosaN8XZqyfEhEtg94mEfFky9ZbRLwKkDb28h0N3BkR64H5kuYB4yQtAPpHxDPpcbcAXwUeTo/5z/T43wBXSVK089RKtwqKfXpvy/g9vtPV1bAMctNnd3UVLIPn4rFPfI6VqxqZOmVUQftWD5+7h6RpeUWTImJSJy89Eng27/3itGxj+rpledMxiwAiokHSB8AgYEVbF+lWQdHMur8AcuQK3X1FRIzteLeCtNbCjXbK2zumTQ6KZpZJEGyMwrrPRbYY2DHv/Q7A0rR8h1bK849ZLKkGGACsau8inmgxs8xyBf5XZPcDE9MZ5Z1IJlSmRsQy4CNJ49NZ5+OB+/KOOSF9/XXg8fbGE8EtRTPLKAgai7S6lqQ7gAnAYEmLgfNJWnJXAkOA30maHhGHRcQsSXcBs4EG4JSITU3Wk0lmsvuQTLA8nJbfANyaTsqsIpm9bpeDoplllmt/WK5gEXFsGx/d28b+FwIXtlI+Ddi7lfJ1wDFZ6uSgaGaZBNBYpKDYHTkomllmxWopdkcOimaWSQAbK3jFfgdFM8skCHefzcw2CWis3JjooGhm2SRPtFQuB0Uzy0g0tvr0XGVwUDSzTJKJFgdFMzOg6T5FB0Uzs01ybimamSXcUjQzyxOIxgpeYMtB0cwyc/fZzCwViA1R3fGOZcpB0cwySW7edvfZzGyTSp5oqdxwb2YlESEao6qgrSOSbpS0XNIreWXbSXpU0tz058C8z85JE9vPkXRYXvkBkmamn12RpiUgTV3wf2n5cy3TqbbGQdHMMsuhgrYC3MTmxPVNzgYei4gxwGPpeyTtSZJOYK/0mKslNQ1uXgOcRJK3ZUzeOU8E3ouIXYH/Bi7uqEIOimaWSTLRUlPQ1uG5Ip5ky+x6RwM3p69vJkls31R+Z0Ssj4j5wDxgnKThQP+IeCZNSnVLi2OazvUb4AtNrci2eEzRzDLJONEyWNK0vPeTImJSB8cMSzP0ERHLJA1Ny0cCz+bt15T0fmP6umV50zGL0nM1SPoAGASsaOviDopmlllj4fcproiIsUW6bFuJ7dtLeN/eZ61y99nMMml6oqWQrZPeSbvEpD+Xp+VNie2bNCW9X5y+blne7BhJNcAAtuyuN+OgaGaZ5aKqoK2T8hPYn0DzxPYT0xnlnUgmVKamXe2PJI1PxwuPb3FM07m+Djyejju2yd1nM8skWRCiOO0pSXcAE0jGHhcD5wM/Be6SdCKwkDRvc0TMknQXMBtoAE6JiMb0VCeTzGT3AR5ON4AbgFslzSNpIU7sqE4OimaWSSA2Fukxv4g4to2PvtDG/hcCF7ZSPg3Yu5XydaRBtVAOimaWSQQF3ZhdrhwUzSyjgm/MLksOimaWSeCWoplZM15k1swsFciLzJqZNUlSnFZu6Kjcb2ZmJaKKXk/RQdHMMgn4JE+rdHsOimaWmVuKZmapCLmlaGbWJJlocTY/M7OUfPO2mVmTZKLFY4pmZpv4iRYzs1SlP9FSueHezEomR1VBW0cknSHpFUmzJJ2ZlhUt73NnOCiaWSYRsDFXVdDWHkl7A98BxgH7AF+WNIbi5n3OzEHRzDJJus9FydHyaeDZiFgTEQ3AH4GvUdy8z5k5KJpZZo3p888dbaR5n/O2k/JO8wpwiKRBkvoCR5Jk3muW9xnIz/u8KO/4pvzOI2k773NmnmjphF69GrnkZ7+nV68c1dU5nn56FLf96jN861szOGj8YnI58cEHdVz28wNZtaovNTWNnHba84wZs4rIiWuv25+ZM4dRW9vAD875E8OHf0QuJ557biS/vGnfrv56FWnIiA18//KFDBzaQOTgodsG8dsbhvC5L7/Pt856mx3HrOf0I8cwd0ZfAPoNbOC8SQvYbd+1PHrXQH5x7uYMmhO++h4TT1tOBKx6pxcXnzaKD1f1nL9KGW/JaTPvc0S8Kuli4FHgY+BlkoRUbelM3ufMSvqblHQ4cDlQDVwfET8t5fW2lo0bqzj7nM+zbl0vqqtzXHrp75k2bTh3/+bT3HrrXwBw1FFzOO64WVx11Wc5/PA3APje945kwIB1/OiCJzjjzGSM+O579mDGjGHU1DTyk4v+wNixS5k2bUSXfbdK1dggJl0wgnkz+9KnvpGrJr/Oi0/2Y8FrdVzwj6M5/eLFzfbfsE7cfMn2jN59HaP3WLepvKo6OPmCpXxnwu58uKqGE/9jKUd9ewW3Xbb91v5KXah4j/lFxA0kGfeQdBFJK+8dScMjYlkR8j5nVrLuczoA+gvgCGBP4Nh0oLQCiHXregFQU5OjpjpHAGvW9tq0R11dw6Z/q0aN+pDp04cB8MEHdaxe3ZsxY1axfn0NM2Yk5Q0N1cx7YyCDB63Zqt+kp1i1vBfzZiatwLWrq1k0r47BwzeyaF4di9+o22L/9WurmTV1Gzasb/5XRAIU1PXJAUH9NjlWvt1ri+MrXS7N09LR1hFJQ9Ofo4C/Ae6guHmfMytlS3EcMC8i3gSQdCfJQOnsEl5zq6mqynHF5VMYMeJjHnxwDHPmDAbghONf5gtfWMDq1b04++zPAzD/zW05aPwS/vjHTzFkyBp23XUVQ4as4fXXB206X339Bg4ct4T77tu9S75PTzJshw3ssvdaXnuxb+ZjGxvElWfvwLWPz2HdmiqWzq/lqh90eviqLCWzz0V79vluSYOAjSR5nN+TVMy8z5mVMii2Nih6YMud0oHXkwDqeg0oYXWKK5er4tTTjqC+fgPn/cdTfOpT7/PWW9ty8y37cPMt+/B3fzeLr3xlLrf96jNMeWRndtzxQ664fArLl9fz6quDaWzc/K9oVVWOf//3P3P//bvx9tvbdOG3qnx1fRs57/oFXPvDEaz5OPtf7Oqa4MvHr+SUL+3Gsrd6c8qFS/jGacu54/JhJaht91TMm7cj4nOtlK2kSHmfO6OUs88FDX5GxKSIGBsRY3vXZP+Xu6utXt2bGTOHMvaAZc3Kn3hiNAcfnPybkMtVMel/9+fU047ggh8dQn39RpYu6bdp3zNOn8rSJf347X17bNW69zTVNcF51y/g8XsG8qeHt+3UOXbZay0Ay96qBcQf79+WPceuLl4ly0Sxus/dUSmDYluDomVvQP911NdvAKB37wb22/cdFi3uz4gRH23aZ/yBS1i8uD8AtbUN1NYmk2r77beMxpxYuChpFR9//Az61m/kukn7b+Vv0dME/3LZIhbNreOeSUM6fZYVb/di1G7rGLBd8vvc/5CPWDR3yzHJStY0+1zIVo5K2X1+HhiTDoguIbkT/bgSXm+rGbjdWv71rGepqgokeOqpUUydOpJzz32KHUZ+RAQsX17PlVd9FoABA9Zx4Y+fIJcTK1f24dJLDwJg8KA1HDtxFgsX9ufKKyYD8MCDuzFlyi5d9t0q1V7jVvPFY97jzdl1XP3oHAB++ZPh9OodfO/HSxgwqIEf3TqfN2bVce5xyZ//zc/Npn6bHDW9g4MO+5AfHLszC+fW8aufD+PSe+fRsFEsX9KbS8/csb1LV6RKXmRWyQ3gJTq5dCTwPyS35NyYjge0aUDfETF+j++UrD5WfLnpFTFv1mM8F4/xYaz6RE24gXsMjc/f+PWC9r3n4GteaOs+xe6qpPcpRsRDwEOlvIaZbX3l2jUuRM+5Dd/MisKLzJqZteCgaGaWqvRFZh0UzSyzcr0HsRAOimaWSQQ0dLCAbDlzUDSzzNx9NjNLeUzRzKyFcFA0M9vMEy1mZqmIyh5TrNwpJDMrEdGYqypo6/BM0j+nOZ9fkXSHpDrnfTazshOhgrb2SBoJnA6MjYi9SRaOmYjzPptZOSnyeoo1QB9JNUBfkjVXnffZzMpIJOOKhWy0k/c5IpYAl5LkYVkGfBARj+C8z2ZWbjLMPreZ9zkdKzwa2Al4H/i1pL9v51zln/fZzCpPpBMtRfBFYH5EvAsg6R7gL6nUvM9mVrkydJ/bsxAYL6lvOlv8BeBVKjjvs5lVqGI80RIRz0n6DfAiSR7nl4BJwDZUaN5nM6tASSuwaHmfzwfOb1G8ni7M++ygaGaZVfITLQ6KZpZZCZOAdjkHRTPLJBA5LzJrZrZZBTcUHRTNLKMiTrR0Rw6KZpZdBTcVHRTNLLMe2VKUdCXt/HsQEaeXpEZm1q0FkMv1wKAITNtqtTCz8hFAT2wpRsTN+e8l1UfE6tJXycy6u0q+T7HDm40kHSRpNsmD2kjaR9LVJa+ZmXVfUeBWhgq5A/N/gMOAlQAR8TJwSAnrZGbdWmGpCMp1Mqag2eeIWNQiD0xjW/uaWQ9Qpq3AQhQSFBdJ+ksgJPUmSTTzammrZWbdVkBU8OxzId3n7wKnkOQ8WALsm743sx5LBW7lp8OWYkSsAL65FepiZuWigrvPhcw+7yzpAUnvSlou6T5JO2+NyplZN1WE2WdJu0uanrd9KOlMSdtJelTS3PTnwLxjzkkT3s+RdFhe+QGSZqafXaEWkyBZFNJ9vh24CxgOjAB+DdzR2QuaWZlrunm7kK2900TMiYh9I2Jf4ABgDXAvcDbwWESMAR5L3yNpT2AisBdJsvurJVWnp7sGOIkkb8uY9PNOKSQoKiJujYiGdLuNim48m1lHipS4Kt8XgDci4i2StKdND4/czObE9kcDd0bE+oiYD8wDxqUZ//pHxDMREcAtecdk1t6zz9ulL/8g6WzgTpJg+A3gd529oJlVgMJnnwdLyn9keFJETGplv4ls7oEOSzP0kaY5HZqWjwSezTumKen9xvR1y/JOaW+i5QWaJ5r+p7zPAvhRZy9qZuVNhbcCV0TE2HbPldzqdxRwTkeXbaUs2invlPaefd6psyc1swpW/Ef4jgBejIh30vfvSBqethKHA8vT8sXAjnnHNSW9X5y+blneKQUlWpC0t6S/k3R809bZC5pZuStwkqXwx/yOpfnk7f3ACenrE9ic2P5+YKKkWkk7kUyoTE272h9JGp/OOh+fd0xmHd6nKOl8YAKwJ/AQSVR/mmQw08x6oiK1FCX1Bf6K5sNzPwXuknQisBA4BiAiZkm6C5gNNACnRETTI8cnAzcBfYCH061TCnnM7+vAPsBLEfFtScOA6zt7QTOrALninCYi1gCDWpStJJmNbm3/C4ELWymfBuxdjDoVEhTXRkROUoOk/iT9e9+8bdZT9dRFZvNMk7Qt8L8kM9IfA1NLWSkz694yzD6XnUKeff5e+vJaSZNJbpKcUdpqmVm31hODoqT92/ssIl4sTZXMzLpOey3Fy9r5LIDPF7kuxNp15KbPLvZprYSmLJ3e1VWwDMYdtqYo5+mR3eeIOHRrVsTMykSQ5TG/slNQOgIzs2Z6YkvRzKwtPbL7bGbWpgoOioWsvC1Jfy/ph+n7UZLGlb5qZtZt9fC8z1cDB5E8tA3wEfCLktXIzLo1ReFbOSqk+3xgROwv6SWAiHgvXf/MzHqqHj77vDHNgxAAkoZQtMfBzawclWsrsBCFdJ+vIEkmM1TShSTLhl1U0lqZWfdWwWOKhTz7/CtJL5As5SPgqxHxaslrZmbdUxmPFxaikNnnUSSpBx8gWfl2dVpmZj1VkVqKkraV9BtJr0l6VdJB5ZD3+XfAg+nPx4A3+QSr2ppZ+VOusK0AlwOTI2IPksWsX6W7532OiM9ExF+kP8cA40jGFc3MOi1dtPoQ4AaAiNgQEe/TxXmfC0pclS9dMuyznb2gmVWAwrvPgyVNy9tOyjvLzsC7wC8lvSTpekn1tMj7DOTnfV6Ud3xTfueRbKW8zwBI+pe8t1XA/ukXMbOeKNtES3t5n2tI4slpEfGcpMtJu8pt2Cp5nwtpKfbL22pJxhaP7uwFzawCFGeiZTGwOCKeS9//hiRIvpN2iemKvM/tthTTQcxtIuL7nb2AmVWgItySExFvS1okafeImENy29/sdDuBJNVpy7zPt0v6OTCCzXmfGyV9JGk88BxJ3ucrO1uv9tIR1EREQ3tpCcys5xEFzywX4jTgV+mjw28C3ybpwXbLvM9TSZqy0yXdD/waWN30YUTc09mLmlkZK+LN2xExHWhtzLFb533eDlhJkpOlaVAzAAdFs56qgp9oaS8oDk1nnl9hyxmeCv4jMbMOVXAEaC8oVgPbUOTpbjMrf5X87HN7QXFZRFyw1WpiZuWjhwbFyl1F0sw6L4o6+9zttBcUW539MTPrkS3FiFi1NStiZuWjp44pmpm1zkHRzCxVxqkGCuGgaGaZCHefzcyacVA0M8vnoGhmlsdB0cwsVeEpTh0UzSy7Cg6KmRNXmZkVK8WppAVpvubpkqalZd0+77OZWTOKwrYCHRoR++YluOreeZ/NzJopNGlV57vY5ZX32cysiEExgEckvZCXE7p75302M8uX8YmWwU1jhalJETEp7/3BEbFU0lDgUUmvdXDploqe99lB0cwyU67gmLMib6xwCxGxNP25XNK9wDjSvM8Rsawr8j67+2xm2RRpTFFSvaR+Ta+BL5HkhLqfJN8zbJn3eaKkWkk7sTnv8zLgI0nj01nn4/OOycwtRTPLrEg3bw8D7k3vnqkBbo+IyZKep5vmfTYza10RgmJEvAns00r5Srp53mczs2b8mJ+ZWT4HRTOzVA/O5mdmtgWvvG1m1lJUblR0UDSzzNxStGaGjNjA9y9fyMChDUQOHrptEL+9YQif+/L7fOust9lxzHpOP3IMc2f0BWD3fddwxiXJI5sCbr1se/48eQC1fXKce90CRozeQK4Rnn20PzdeNKILv1llueyfd+S53/dn28ENTPrDHACefGAAt162PYvm1nHFQ6+z2z5rN+1/55VDmXzHIKqrgpN/vISxEz5qdr7zT9iJZQt7bzrXg7cM4oGbBlNVBX3qGznjkkV8arf1W+8LdhVn8+scSTcCXwaWR0RR7h/qLhobxKQLRjBvZl/61Ddy1eTXefHJfix4rY4L/nE0p1+8uNn+C+bUcerhu5FrFNsN3cg1v3+dZx/tD8Dd1w7l5T9vQ02vHBff9SZjD/2QaX/o3xVfq+J86RurOOrbK7jkjFGbykbvsY4fXr+AK/59x2b7vvV6LU/cN5BJf3iNVe/04uxv7MINT79Kdbow1dMPDaCuvvnswqFfe48vH78SgGem9Oe6/xzJRbe/Wdov1U1U8kRLKR/zu4lPsKZZd7ZqeS/mzUxagWtXV7NoXh2Dh29k0bw6Fr9Rt8X+69dWkWtMnlnvVZvbNByzfm0VL/95GwAaNlYxd2YfhgzfuHW+RA/wmfGr6TewsVnZqDHr2XHXLVtzz0wZwISj36N3bbD9qA2MGL2eOS81/Y6ruOe6IRx35tvNjqnvtzkyrFtTReeXNS0/xVpktjsqWUsxIp6UNLpU5+8uhu2wgV32XstrL/Ztd7/d91vNWT9fxNAdNvKz00ZtCpJN6vs3Mv6vPuS31w8uZXWtDSuW9eLTB6zZ9H7w8I2sfLsXADf/bHv+9rvvUttnyz7j/b8czD2ThrBxg/jZr+dttfp2qaCiJ1q6fEEISSdJmiZp2kbKazymrm8j512/gGt/OII1H1e3u++cl+o56dA9OO2IMUw87R161W7+Z7SqOjjn6re474bBvL2wttTVtta09ndc8MYrfVg6v5aDj/ig1cOO+vYKbnrmVU48dym3X759aevYjRR55e1upcuDYkRMioixETG2F+UTEKprgvOuX8Dj9wzkTw9vW/Bxi+bVsW5NFaN3X7ep7MxLFrFkfi33Xj+kBDW1QgwesZF3l/ba9H7Fsl4MGraR2S/0Ze7Mvhw/bk/O+uquLHmzlu//7a5bHD/hq+/z58kDtmaVu1ZpV97uUl0eFMtT8C+XLWLR3DrumdRxIBu243qqqpP/Q4aO3MAOu6znncW9ATjh35ZR3y/HtT/0rHNXGv+lD3nivoFsWC/eXtibJfNr2X2/NXzlhJXc8dIsbpk6m8t+O4+RO6/nkruTbvKSN3tvOn7q7/szcqfy6ul0VtPN25XaUvQtOZ2w17jVfPGY93hzdh1XP5rcnvHLnwynV+/gez9ewoBBDfzo1vm8MauOc4/bhb3HreYbp86noUHkcuLKH+zAh6tqGDx8A8eduZyFc2v5xSOvA8kY1eTbB3Xl16sYPzn5U8x4Zhs+WFXDNw/Yk2+d9Tb9BjZy9X+M5IOVNZz3rZ3ZZa+1XHTHm4zefR2HfOV9TpqwB9XVwakXLd4089yW+385hBef2oaaGthm2wb+9fKFW+eLdbWILIvMlh1FiQZMJd0BTAAGA+8A50fEDe0d01/bxYFqdcUg66amLJ3e1VWwDMYdtohpL6/7RPPk/bbdIfY75IyC9n3qgX97ob2Vt7ujUs4+H1uqc5tZ1yrXrnEhPKZoZtkEkIvCtgJIqpb0kqQH0/fbSXpU0tz058C8fc9JE97PkXRYXvkBkmamn12RpiXoFAdFM8uuuLPPZwCv5r0/G3gsIsYAj6XvkbQnMBHYi+TBkKslNY38XgOcRJK3ZQyf4MERB0Uzy6xYs8+SdgD+Grg+r/ho4Ob09c1sTmx/NHBnRKyPiPnAPGBcmvGvf0Q8E8kkyS15x2Tm2WczyyzD7HNHeZ//B/g3oF9e2bA0Qx9pmtOhaflI4Nm8/ZqS3m9MX7cs7xQHRTPLJlvXuM28z5KaFox5QdKEAs7VVtL7tso7xUHRzDJJbt4uyvTzwcBRko4E6oD+km4D3pE0PG0lDgeWp/svBvKXN2pKer84fd2yvFM8pmhm2eUK3NoREedExA4RMZpkAuXxiPh7kqT3J6S7ncDmxPb3AxMl1UraiWRCZWra1f5I0vh01vn4vGMyc0vRzDIrUkuxLT8F7pJ0IrAQOAYgImZJuguYDTQAp0RE09pwJ5MsV9gHeDjdOsVB0cyyKcFiDxHxBPBE+nol0OqjbRFxIXBhK+XTgKIsZu2gaGYZVfazzw6KZpZdBS8y66BoZtlE+aYaKISDopll55aimVmeyo2JDopmlp1yldt/dlA0s2yCDm/MLmcOimaWiYhS37zdpRwUzSw7B0UzszwOimZmKY8pmpk159lnM7NNwt1nM7NNAgdFM7NmKrf37JW3zSw7RRS0tXsOqU7SVEkvS5ol6b/Scud9NrMyE1HY1r71wOcjYh9gX+BwSeNx3mczKysR0JgrbGv3NBER8XH6tle6BV2c99lB0cyyK7ylOFjStLztpPzTSKqWNJ0kY9+jEfEcLfI+A/l5nxflHd6U33kkzvtsZl2q8NnnNvM+J6eJRmBfSdsC90pqL8/KVsn77JaimWUTQC4K2wo9ZcT7JImrDifN+wzgvM9mVgYCIlfY1g5JQ9IWIpL6AF8EXsN5n82srAQdTqIUaDhwczqDXAXcFREPSnoG5302s7JShCdaImIGsF8r5c77bGZlxo/5mZk18YIQZmabBeClw8zM8rilaGbWJIo1+9wtOSiaWTYB0cE9iOXMQdHMssvwtEq5cVA0s+w8pmhmlorw7LOZWTNuKZqZNQmisbHj3cqUg6KZZdO0dFiFclA0s+x8S46ZWSKAcEvRzCwV4ZaimVm+Sp5oUXSjqXVJ7wJvdXU9SmAwsKKrK2GZVOrv7FMRMeSTnEDSZJI/n0KsiIhO52DuCt0qKFYqSdPay2hm3Y9/Zz2XE1eZmeVxUDQzy+OguHVM6uoKWGb+nfVQHlM0M8vjlqKZWR4HRTOzPA6KJSTpcElzJM2TdHZX18c6JulGScslvdLVdbGu4aBYIpKqgV8ARwB7AsdK2rNra2UFuAkoq5uNrbgcFEtnHDAvIt6MiA3AncDRXVwn60BEPAms6up6WNdxUCydkcCivPeL0zIz68YcFEtHrZT5/iezbs5BsXQWAzvmvd8BWNpFdTGzAjkols7zwBhJO0nqDUwE7u/iOplZBxwUSyQiGoBTgSnAq8BdETGra2tlHZF0B/AMsLukxZJO7Oo62dblx/zMzPK4pWhmlsdB0cwsj4OimVkeB0UzszwOimZmeRwUy4ikRknTJb0i6deS+n6Cc90k6evp6+vbW6xC0gRJf9mJayyQtEXWt7bKW+zzccZr/aekf81aR7OWHBTLy9qI2Dci9gY2AN/N/zBdmSeziPjHiJjdzi4TgMxB0awcOSiWr6eAXdNW3B8k3Q7MlFQt6RJJz0uaIemfAJS4StJsSb8DhjadSNITksamrw+X9KKklyU9Jmk0SfD957SV+jlJQyTdnV7jeUkHp8cOkvSIpJckXUfrz383I+m3kl6QNEvSSS0+uyyty2OShqRlu0ianB7zlKQ9ivKnaZaq6eoKWHaSakjWaZycFo0D9o6I+Wlg+SAiPiupFviTpEeA/YDdgc8Aw4DZwI0tzjsE+F/gkPRc20XEKknXAh9HxKXpfrcD/x0RT0saRfLUzqeB84GnI+ICSX8NNAtybfiH9Bp9gOcl3R0RK4F64MWIOEvSD9Nzn0qSUOq7ETFX0oHA1cDnO/HHaNYqB8Xy0kfS9PT1U8ANJN3aqRExPy3/EvAXTeOFwABgDHAIcEdENAJLJT3eyvnHA082nSsi2lpX8IvAntKmhmB/Sf3Sa/xNeuzvJL1XwHc6XdLX0tc7pnVdCeSA/0vLbwPukbRN+n1/nXft2gKuYVYwB8XysjYi9s0vSIPD6vwi4LSImNJivyPpeOkyFbAPJMMuB0XE2lbqUvBzo5ImkATYgyJijaQngLo2do/0uu+3/DMwKyaPKVaeKcDJknoBSNpNUj3wJDAxHXMcDhzayrHPAP9P0k7psdul5R8B/fL2e4SkK0u6377pyyeBb6ZlRwADO6jrAOC9NCDuQdJSbVIFNLV2jyPpln8IzJd0THoNSdqng2uYZeKgWHmuJxkvfDFNvnQdSY/gXmAuMBO4BvhjywMj4l2SccB7JL3M5u7rA8DXmiZagNOBselEzmw2z4L/F3CIpBdJuvELO6jrZKBG0gzgR8CzeZ+tBvaS9ALJmOEFafk3gRPT+s3CKR6syLxKjplZHrcUzczyOCiameVxUDQzy+OgaGaWx0HRzCyPg6KZWR4HRTOzPP8ffeblLKHiM04AAAAASUVORK5CYII=\n",
+      "text/plain": [
+       "<Figure size 432x288 with 2 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "#confusion matrix\n",
+    "plot_confusion_matrix(estimator=Best_model, y_true=y_test, X=X_test)\n",
+    "plt.savefig(\"conufsion_matrix_test\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (oy-env)",
+   "language": "python",
+   "name": "oy-env"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.8.5"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}
