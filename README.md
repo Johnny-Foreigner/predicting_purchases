@@ -1,7 +1,7 @@
 # Table of Contents
 
 ### Data
-[Exploratory Data Analysis](data/data_download.ipynb)
+[Data Download Instructions](data/data_download.ipynb)
 
 [Oct 19 CSV](data/2019-Oct.csv)
 
@@ -29,7 +29,7 @@
 [ReadMe](README)
 
 ### Environment
-Environement(predict.yml)
+[Environement](predict.yml)
 
 
 # Business Understanding
@@ -72,6 +72,8 @@ An example of a purchase funnel, may be three chronological rows, with the rows 
 
 
 # Data Preparation
+
+Before we start here please see the [data download instructions](data/data_download.ipynb) to get the relevant datasets from Kaggle and ready for data preperation.
 
 First: After importing our data, I first converted the CSV files to a Pandas DataFrame, and dropped rows containing `cart` or `view` as they are irrelevant to our prediction. You must first add an item to the cart before you can purchase or remove the item.
 
@@ -143,7 +145,9 @@ predicting_purchases
     |    |
     |    ├ exploratory
     |    |   |
-    |    |   └ EDA.ipynb (Jupyter Notebook containing data exploration process, initial model development, and creation of visualizations)   
+    |    |   ├ eda_index.ipynb (Jupyter Notebook containing misc data exploration process, initial model development, and creation of visualizations)   
+    |    |   |
+    |    |   └Final_Notebook.ipynb (Jupyter Notebook containing all finalized code from data preperation through final model evaluation)
     |    |
     |    └ figs (Folder containing all images created and stored for use in EDA)      
     |
