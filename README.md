@@ -78,7 +78,7 @@ The attached .yml file (predict.yml) has a complete list of necessary packages.
 To run the environment please use the following commands:
 ```
 conda env create -f <path_to_predicting.yml_file>
-conda activate predicting.yml
+conda activate predicting
 ```
 Success! You are in your newly created environment.
 
