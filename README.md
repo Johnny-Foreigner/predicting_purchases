@@ -19,11 +19,11 @@
 [Figures](data_exploration/figs)
 
 ### Reports
-[Final Report Notebook](reports/final_notebook)
+[Final Report Notebook](reports/Final_Notebook_PDF.pdf)
 
-[Final Powerpoint Presentation](reports/e_commerce_pp)
+[Final Powerpoint Presentation](reports/e_commerce_pp.pdf)
 
-[Final Readme](reports/README)
+[Final Readme](reports/README.md)
 
 ### ReadMe
 [ReadMe](README)
