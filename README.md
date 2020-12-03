@@ -19,11 +19,11 @@
 [Figures](data_exploration/figs)
 
 ### Reports
-[Final Report Notebook](reports/final_notebook)
+[Final Report Notebook](reports/Final_Notebook_PDF.pdf)
 
-[Final Powerpoint Presentation](reports/e_commerce_pp)
+[Final Powerpoint Presentation](reports/e_commerce_pp.pdf)
 
-[Final Readme](reports/README)
+[Final Readme](reports/README.md)
 
 ### ReadMe
 [ReadMe](README)
@@ -78,7 +78,7 @@ The attached .yml file (predict.yml) has a complete list of necessary packages.
 To run the environment please use the following commands:
 ```
 conda env create -f <path_to_predicting.yml_file>
-conda activate predicting.yml
+conda activate predicting
 ```
 Success! You are in your newly created environment.
 
