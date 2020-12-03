@@ -70,6 +70,19 @@ The dataset contains the following features:
 
 An example of a purchase funnel, may be three chronological rows, with the rows sharing `user_session` and `user_id` values. Where the first row is a view, the second is cart, and the final is a purchase.
 
+# Environment Repoduction
+I am using MacOS Mojave 10.14.6
+
+The attached .yml file (predict.yml) has a complete list of necessary packages.
+
+To run the envrionment please use the following commands:
+```
+conda env create -f <path_to_predict.yml_file>
+conda activate predict.yml
+```
+Success! You are in your newly created environment.
+
+For more infomation please see this great post on [medium](https://medium.com/@balance1150/how-to-build-a-conda-environment-through-a-yaml-file-db185acf5d22)<sup>4</sup>
 
 # Data Preparation
 
@@ -167,4 +180,6 @@ predicting_purchases
 <sup>2</sup> "Online shopping cart abandonment rate worldwide", https://www.statista.com/statistics/477804/online-shopping-cart-abandonment-rate-worldwide/
 
 <sup>3</sup> "eCommerce Events History in Cosmetics Shop", https://www.kaggle.com/mkechinov/ecommerce-events-history-in-cosmetics-shop
+
+<sup>4</sup> "How to Build a Conda Environment Through a yaml File" https://medium.com/@balance1150/how-to-build-a-conda-environment-through-a-yaml-file-db185acf5d22
 
