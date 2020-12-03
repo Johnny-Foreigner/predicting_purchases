@@ -75,14 +75,14 @@ I am using MacOS Mojave 10.14.6
 
 The attached .yml file (predict.yml) has a complete list of necessary packages.
 
-To run the envrionment please use the following commands:
+To run the environment please use the following commands:
 ```
 conda env create -f <path_to_predict.yml_file>
 conda activate predict.yml
 ```
 Success! You are in your newly created environment.
 
-For more infomation please see this great post on [medium](https://medium.com/@balance1150/how-to-build-a-conda-environment-through-a-yaml-file-db185acf5d22)<sup>4</sup>
+For more information please see this great post on [medium](https://medium.com/@balance1150/how-to-build-a-conda-environment-through-a-yaml-file-db185acf5d22)<sup>4</sup>
 
 # Data Preparation
 
