@@ -130,7 +130,7 @@ I studied the problem and the data available, iterated through several model pro
 
 With regards to next steps there are a few directions I would like to take a look out at our Class 0 (purchased) scores. I believe with some more feature engineering I could improve the scores for that class across the board. I would also be interested in further hyperparameter tuning. Due to time and computational power constraints I wasn’t able to test as many parameters as I would have liked.
 
-# Navigration Tree
+# Navigation Tree
 
 ```
 predicting_purchases
